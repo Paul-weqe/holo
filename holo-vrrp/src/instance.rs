@@ -26,6 +26,7 @@ use crate::interface::{InterfaceSys, InterfaceView};
 use crate::northbound::configuration::InstanceCfg;
 use crate::packet::{ArpHdr, EthernetHdr, Ipv4Hdr, VrrpHdr, VrrpPacket};
 use crate::tasks::messages::output::NetTxPacketMsg;
+use crate::version::Version;
 use crate::{network, southbound, tasks};
 
 #[derive(Debug)]
@@ -150,7 +151,10 @@ impl Instance {
         }
     }
 
-    pub(crate) fn update(&mut self, interface: &InterfaceView) {
+    pub(crate) fn update<V>(&mut self, interface: &InterfaceView<V>)
+    where
+        V: Version,
+    {
         let is_ready = interface.system.ifindex.is_some()
             && !interface.system.addresses.is_empty()
             && self.mvlan.system.ifindex.is_some();
@@ -161,7 +165,10 @@ impl Instance {
         }
     }
 
-    fn startup(&mut self, interface: &InterfaceView) {
+    fn startup<V>(&mut self, interface: &InterfaceView<V>)
+    where
+        V: Version,
+    {
         match InstanceNet::new(interface, &self.mvlan) {
             Ok(net) => {
                 self.net = Some(net);
@@ -191,7 +198,10 @@ impl Instance {
         }
     }
 
-    pub(crate) fn shutdown(&mut self, interface: &InterfaceView) {
+    pub(crate) fn shutdown<V>(&mut self, interface: &InterfaceView<V>)
+    where
+        V: Version,
+    {
         if self.state.state == fsm::State::Master {
             // Send an advertisement with Priority = 0.
             let src_ip = interface.system.addresses.first().unwrap();
@@ -222,13 +232,15 @@ impl Instance {
         self.net = None;
     }
 
-    pub(crate) fn change_state(
+    pub(crate) fn change_state<V>(
         &mut self,
-        interface: &InterfaceView,
+        interface: &InterfaceView<V>,
         state: fsm::State,
         event: fsm::Event,
         new_master_reason: MasterReason,
-    ) {
+    ) where
+        V: Version,
+    {
         if self.state.state == state {
             return;
         }
@@ -276,7 +288,10 @@ impl Instance {
         self.timer_set(interface);
     }
 
-    pub(crate) fn timer_set(&mut self, interface: &InterfaceView) {
+    pub(crate) fn timer_set<V>(&mut self, interface: &InterfaceView<V>)
+    where
+        V: Version,
+    {
         match self.state.state {
             fsm::State::Initialize => {
                 self.state.timer = VrrpTimer::Null;
@@ -439,10 +454,13 @@ impl InstanceMacvlan {
 // ==== impl InstanceNet ====
 
 impl InstanceNet {
-    pub(crate) fn new(
-        parent_iface: &InterfaceView,
+    pub(crate) fn new<V>(
+        parent_iface: &InterfaceView<V>,
         mvlan: &InstanceMacvlan,
-    ) -> Result<Self, IoError> {
+    ) -> Result<Self, IoError>
+    where
+        V: Version,
+    {
         let instance_channels_tx = &parent_iface.tx;
 
         // Create raw sockets.

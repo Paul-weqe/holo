@@ -23,4 +23,16 @@ module holo-vrrp {
     description
       "VRRP protocol.";
   }
+
+  identity vrrpv2 {
+    base rt:routing-protocol;
+    description
+      "VRRP V2 protocol.";
+  }
+
+  identity vrrpv3 {
+    base rt:routing-protocol;
+    description
+      "VRRP V3 protocol.";
+  }
 }

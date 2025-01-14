@@ -23,6 +23,7 @@ use ipnetwork::Ipv4Network;
 use crate::instance::{fsm, Instance};
 use crate::interface::Interface;
 use crate::southbound;
+use crate::version::{Version, Vrrpv2, Vrrpv3};
 
 #[derive(Debug, Default, EnumAsInner)]
 pub enum ListEntry {
@@ -44,9 +45,14 @@ pub enum Event {
     ResetTimer { vrid: u8 },
 }
 
-pub static VALIDATION_CALLBACKS: Lazy<ValidationCallbacks> =
+pub static VALIDATION_CALLBACKS_VRRPV2: Lazy<ValidationCallbacks> =
     Lazy::new(load_validation_callbacks);
-pub static CALLBACKS: Lazy<Callbacks<Interface>> = Lazy::new(load_callbacks);
+pub static VALIDATION_CALLBACKS_VRRPV3: Lazy<ValidationCallbacks> =
+    Lazy::new(load_validation_callbacks);
+pub static CALLBACKS_VRRPV2: Lazy<Callbacks<Interface<Vrrpv2>>> =
+    Lazy::new(load_callbacks);
+pub static CALLBACKS_VRRPV3: Lazy<Callbacks<Interface<Vrrpv3>>> =
+    Lazy::new(load_callbacks);
 
 // ===== configuration structs =====
 
@@ -61,8 +67,11 @@ pub struct InstanceCfg {
 
 // ===== callbacks =====
 
-fn load_callbacks() -> Callbacks<Interface> {
-    CallbacksBuilder::<Interface>::default()
+fn load_callbacks<V>() -> Callbacks<Interface<V>>
+where
+    V: Version,
+{
+    CallbacksBuilder::<Interface<V>>::default()
         .path(interfaces::interface::ipv4::vrrp::vrrp_instance::PATH)
         .create_apply(|interface, args| {
             let vrid = args.dnode.get_u8_relative("./vrid").unwrap();
@@ -170,17 +179,20 @@ fn load_validation_callbacks() -> ValidationCallbacks {
 // ===== impl Interface =====
 
 #[async_trait]
-impl Provider for Interface {
+impl<V> Provider for Interface<V>
+where
+    V: Version,
+{
     type ListEntry = ListEntry;
     type Event = Event;
     type Resource = Resource;
 
     fn validation_callbacks() -> Option<&'static ValidationCallbacks> {
-        Some(&VALIDATION_CALLBACKS)
+        V::validation_callbacks()
     }
 
-    fn callbacks() -> Option<&'static Callbacks<Interface>> {
-        Some(&CALLBACKS)
+    fn callbacks() -> Option<&'static Callbacks<Interface<V>>> {
+        V::configuration_callbacks()
     }
 
     async fn process_event(&mut self, event: Event) {

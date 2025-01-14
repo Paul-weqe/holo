@@ -27,6 +27,7 @@ use crate::interface::InterfaceView;
 use crate::packet::{ArpHdr, EthernetHdr, Ipv4Hdr, VrrpHdr, VrrpPacket};
 use crate::tasks::messages::input::VrrpNetRxPacketMsg;
 use crate::tasks::messages::output::NetTxPacketMsg;
+use crate::version::Version;
 
 // ===== global functions =====
 
@@ -60,9 +61,12 @@ pub(crate) fn socket_vrrp_tx(
     }
 }
 
-pub(crate) fn socket_vrrp_rx(
-    interface: &InterfaceView,
-) -> Result<Socket, std::io::Error> {
+pub(crate) fn socket_vrrp_rx<V>(
+    interface: &InterfaceView<V>,
+) -> Result<Socket, std::io::Error>
+where
+    V: Version,
+{
     #[cfg(not(feature = "testing"))]
     {
         let socket = capabilities::raise(|| {

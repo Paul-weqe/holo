@@ -18,6 +18,7 @@ use holo_northbound::yang::interfaces;
 use holo_northbound::{CallbackKey, NbDaemonSender};
 use holo_protocol::spawn_protocol_task;
 use holo_utils::yang::DataNodeRefExt;
+use holo_vrrp::version::Vrrpv2;
 use ipnetwork::IpNetwork;
 
 use crate::interface::Owner;
@@ -313,7 +314,9 @@ impl Provider for Master {
     fn nested_callbacks() -> Option<Vec<CallbackKey>> {
         let keys: Vec<Vec<CallbackKey>> = vec![
             #[cfg(feature = "vrrp")]
-            holo_vrrp::northbound::configuration::CALLBACKS.keys(),
+            holo_vrrp::northbound::configuration::CALLBACKS_VRRPV2.keys(),
+            #[cfg(feature = "vrrp")]
+            holo_vrrp::northbound::configuration::CALLBACKS_VRRPV3.keys(),
         ];
 
         Some(keys.concat())
@@ -433,8 +436,8 @@ impl Provider for Master {
                     if let Some(iface) =
                         self.interfaces.get_mut_by_name(&ifname)
                     {
-                        let vrrp = spawn_protocol_task::<
-                            holo_vrrp::interface::Interface,
+                        let vrrpv2 = spawn_protocol_task::<
+                            holo_vrrp::interface::Interface<Vrrpv2>,
                         >(
                             ifname,
                             &self.nb_tx,
@@ -442,7 +445,7 @@ impl Provider for Master {
                             Default::default(),
                             self.shared.clone(),
                         );
-                        iface.vrrp = Some(vrrp);
+                        iface.vrrp = Some(vrrpv2);
                     }
                 }
             }

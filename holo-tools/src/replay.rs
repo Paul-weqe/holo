@@ -82,7 +82,7 @@ async fn main() {
             eprintln!("Unsupported protocol type");
             std::process::exit(1);
         }
-        Protocol::VRRP => {
+        Protocol::VRRPV2 => {
             replay::<holo_vrrp::interface::Interface>(filename).await
         }
     }

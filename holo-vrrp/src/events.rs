@@ -19,14 +19,18 @@ use crate::instance::{fsm, MasterReason, VrrpTimer};
 use crate::interface::Interface;
 use crate::packet::{DecodeError, DecodeResult, VrrpHdr};
 use crate::tasks;
+use crate::version::Version;
 
 // ===== VRRP network packet receipt =====
 
-pub(crate) fn process_vrrp_packet(
-    interface: &mut Interface,
+pub(crate) fn process_vrrp_packet<V>(
+    interface: &mut Interface<V>,
     src: Ipv4Addr,
     packet: DecodeResult<VrrpHdr>,
-) -> Result<(), Error> {
+) -> Result<(), Error>
+where
+    V: Version,
+{
     // Check if the packet was decoded successfully.
     let packet = match packet {
         Ok(packet) => packet,
@@ -128,10 +132,13 @@ pub(crate) fn process_vrrp_packet(
 
 // ====== Master down timer =====
 
-pub(crate) fn handle_master_down_timer(
-    interface: &mut Interface,
+pub(crate) fn handle_master_down_timer<V>(
+    interface: &mut Interface<V>,
     vrid: u8,
-) -> Result<(), Error> {
+) -> Result<(), Error>
+where
+    V: Version,
+{
     // Lookup instance.
     let Some((interface, instance)) = interface.get_instance(vrid) else {
         return Ok(());

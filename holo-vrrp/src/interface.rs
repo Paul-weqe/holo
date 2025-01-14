@@ -26,10 +26,11 @@ use crate::error::Error;
 use crate::instance::Instance;
 use crate::tasks::messages::input::{MasterDownTimerMsg, VrrpNetRxPacketMsg};
 use crate::tasks::messages::{ProtocolInputMsg, ProtocolOutputMsg};
+use crate::version::Version;
 use crate::{events, southbound};
 
 #[derive(Debug)]
-pub struct Interface {
+pub struct Interface<V: Version> {
     // Interface name.
     pub name: String,
     // Interface system data.
@@ -39,7 +40,7 @@ pub struct Interface {
     // Global statistics.
     pub statistics: Statistics,
     // Tx channels.
-    pub tx: InstanceChannelsTx<Interface>,
+    pub tx: InstanceChannelsTx<Interface<V>>,
     // Shared data.
     pub shared: InstanceShared,
 }
@@ -81,21 +82,24 @@ pub struct ProtocolInputChannelsRx {
     pub master_down_timer_rx: Receiver<MasterDownTimerMsg>,
 }
 
-pub struct InterfaceView<'a> {
+pub struct InterfaceView<'a, V: Version> {
     pub name: &'a str,
     pub system: &'a mut InterfaceSys,
     pub statistics: &'a mut Statistics,
-    pub tx: &'a InstanceChannelsTx<Interface>,
+    pub tx: &'a InstanceChannelsTx<Interface<V>>,
     pub shared: &'a InstanceShared,
 }
 
 // ===== impl Interface =====
 
-impl Interface {
+impl<V> Interface<V>
+where
+    V: Version,
+{
     pub(crate) fn get_instance(
         &mut self,
         vrid: u8,
-    ) -> Option<(InterfaceView<'_>, &mut Instance)> {
+    ) -> Option<(InterfaceView<'_, V>, &mut Instance)> {
         self.instances.get_mut(&vrid).map(|instance| {
             (
                 InterfaceView {
@@ -112,7 +116,7 @@ impl Interface {
 
     pub(crate) fn iter_instances(
         &mut self,
-    ) -> (InterfaceView<'_>, impl Iterator<Item = &mut Instance>) {
+    ) -> (InterfaceView<'_, V>, impl Iterator<Item = &mut Instance>) {
         (
             InterfaceView {
                 name: &self.name,
@@ -125,7 +129,7 @@ impl Interface {
         )
     }
 
-    pub(crate) fn as_view(&mut self) -> InterfaceView<'_> {
+    pub(crate) fn as_view(&mut self) -> InterfaceView<'_, V> {
         InterfaceView {
             name: &self.name,
             system: &mut self.system,
@@ -137,8 +141,11 @@ impl Interface {
 }
 
 #[async_trait]
-impl ProtocolInstance for Interface {
-    const PROTOCOL: Protocol = Protocol::VRRP;
+impl<V> ProtocolInstance for Interface<V>
+where
+    V: Version,
+{
+    const PROTOCOL: Protocol = V::PROTOCOL;
 
     type ProtocolInputMsg = ProtocolInputMsg;
     type ProtocolOutputMsg = ProtocolOutputMsg;
@@ -148,8 +155,8 @@ impl ProtocolInstance for Interface {
     async fn new(
         name: String,
         shared: InstanceShared,
-        tx: InstanceChannelsTx<Interface>,
-    ) -> Interface {
+        tx: InstanceChannelsTx<Interface<V>>,
+    ) -> Interface<V> {
         Interface {
             name,
             system: Default::default(),
@@ -231,10 +238,13 @@ impl MessageReceiver<ProtocolInputMsg> for ProtocolInputChannelsRx {
 
 // ===== helper functions =====
 
-async fn process_ibus_msg(
-    interface: &mut Interface,
+async fn process_ibus_msg<V>(
+    interface: &mut Interface<V>,
     msg: IbusMsg,
-) -> Result<(), Error> {
+) -> Result<(), Error>
+where
+    V: Version,
+{
     match msg {
         // Interface update notification.
         IbusMsg::InterfaceUpd(msg) => {

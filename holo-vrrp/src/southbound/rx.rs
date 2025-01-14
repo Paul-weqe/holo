@@ -11,13 +11,16 @@ use holo_utils::southbound::{AddressMsg, InterfaceUpdateMsg};
 use ipnetwork::IpNetwork;
 
 use crate::interface::Interface;
+use crate::version::Version;
 
 // ===== global functions =====
 
-pub(crate) fn process_iface_update(
-    interface: &mut Interface,
+pub(crate) fn process_iface_update<V>(
+    interface: &mut Interface<V>,
     msg: InterfaceUpdateMsg,
-) {
+) where
+    V: Version,
+{
     let (interface, mut instances) = interface.iter_instances();
 
     // Handle updates for the primary VRRP interface.
@@ -42,7 +45,10 @@ pub(crate) fn process_iface_update(
     }
 }
 
-pub(crate) fn process_addr_add(interface: &mut Interface, msg: AddressMsg) {
+pub(crate) fn process_addr_add<V>(interface: &mut Interface<V>, msg: AddressMsg)
+where
+    V: Version,
+{
     let (interface, instances) = interface.iter_instances();
 
     // Handle address updates for the primary VRRP interface.
@@ -56,7 +62,10 @@ pub(crate) fn process_addr_add(interface: &mut Interface, msg: AddressMsg) {
     }
 }
 
-pub(crate) fn process_addr_del(interface: &mut Interface, msg: AddressMsg) {
+pub(crate) fn process_addr_del<V>(interface: &mut Interface<V>, msg: AddressMsg)
+where
+    V: Version,
+{
     let (interface, instances) = interface.iter_instances();
 
     // Handle address updates for the primary VRRP interface.

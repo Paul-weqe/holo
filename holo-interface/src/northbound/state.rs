@@ -59,7 +59,7 @@ impl Provider for Master {
     fn nested_callbacks() -> Option<Vec<CallbackKey>> {
         let keys: Vec<Vec<CallbackKey>> = vec![
             #[cfg(feature = "vrrp")]
-            holo_vrrp::northbound::state::CALLBACKS.keys(),
+            holo_vrrp::northbound::state::CALLBACKS_VRRPV2.keys(),
         ];
 
         Some(keys.concat())

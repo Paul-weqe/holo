@@ -21,8 +21,12 @@ use holo_yang::ToYang;
 
 use crate::instance::Instance;
 use crate::interface::Interface;
+use crate::version::{Version, Vrrpv2, Vrrpv3};
 
-pub static CALLBACKS: Lazy<Callbacks<Interface>> = Lazy::new(load_callbacks);
+pub static CALLBACKS_VRRPV2: Lazy<Callbacks<Interface<Vrrpv2>>> =
+    Lazy::new(load_callbacks_vrrpv2);
+pub static CALLBACKS_VRRPV3: Lazy<Callbacks<Interface<Vrrpv3>>> =
+    Lazy::new(load_callbacks_vrrpv3);
 
 #[derive(Debug, Default, EnumAsInner)]
 pub enum ListEntry<'a> {
@@ -33,8 +37,11 @@ pub enum ListEntry<'a> {
 
 // ===== callbacks =====
 
-fn load_callbacks() -> Callbacks<Interface> {
-    CallbacksBuilder::<Interface>::default()
+fn load_callbacks<V>() -> Callbacks<Interface<V>>
+where
+    V: Version,
+{
+    CallbacksBuilder::<Interface<V>>::default()
         .path(interfaces::interface::ipv4::vrrp::vrrp_instance::PATH)
         .get_iterate(|interface, _args| {
             let iter = interface.instances.iter().map(|(vrid, instance)| ListEntry::Instance(*vrid, instance));
@@ -77,16 +84,29 @@ fn load_callbacks() -> Callbacks<Interface> {
         .build()
 }
 
+fn load_callbacks_vrrpv3() -> Callbacks<Interface<Vrrpv3>> {
+    let core_cbs = load_callbacks();
+    CallbacksBuilder::new(core_cbs).build()
+}
+
+fn load_callbacks_vrrpv2() -> Callbacks<Interface<Vrrpv2>> {
+    let core_cbs = load_callbacks();
+    CallbacksBuilder::new(core_cbs).build()
+}
+
 // ===== impl Interface =====
 
-impl Provider for Interface {
+impl<V> Provider for Interface<V>
+where
+    V: Version,
+{
     // TODO
     const STATE_PATH: &'static str = "";
 
     type ListEntry<'a> = ListEntry<'a>;
 
-    fn callbacks() -> Option<&'static Callbacks<Interface>> {
-        Some(&CALLBACKS)
+    fn callbacks() -> Option<&'static Callbacks<Interface<V>>> {
+        V::state_callbacks()
     }
 }
 
