@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 pub type DecodeResult<T> = Result<T, DecodeError>;
 
 // OSPFv2 decode errors.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum DecodeError {
     InvalidIpHdrLength(u16),
     InvalidVersion(u8),
