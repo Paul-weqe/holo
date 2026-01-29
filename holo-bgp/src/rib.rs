@@ -594,12 +594,12 @@ where
             Arc::clone(attr_set)
         } else {
             let index = {
-                #[cfg(not(feature = "deterministic"))]
+                #[cfg(feature = "deterministic")]
                 {
                     self.next_index += 1;
                     self.next_index
                 }
-                #[cfg(feature = "deterministic")]
+                #[cfg(not(feature = "deterministic"))]
                 {
                     use std::hash::Hasher;
 
